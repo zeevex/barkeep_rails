@@ -34,3 +34,8 @@ module BarkeepRails
     url
   end
 end
+
+if defined?(Rails)
+  require File.join(File.dirname(__FILE__), *%w[barkeep_rails barcode_helper])
+  ActionView::Base.send :include, BarkeepRails::BarcodeHelper
+end
