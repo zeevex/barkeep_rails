@@ -2,6 +2,7 @@ require "barkeep_rails/version"
 require 'active_support/core_ext'
 
 module BarkeepRails
+  mattr_accessor :default_provider
   #
   # See http://www.barcodes4.me/apidocumentation
   #
@@ -14,7 +15,7 @@ module BarkeepRails
     imagetype = options.delete(:imagetype) || "png"
     secure    = options.delete(:secure)    || false
 
-    unless %w{c39 c128a c128b c128c i2of5}.include?(type.to_s)
+    unless %w{c39 c128 c128a c128b c128c i2of5 qr ean8 ean13 upca upce}.include?(type.to_s)
       raise ArgumentError, "Cannot generate barcodes for type #{type}"
     end
 
@@ -24,8 +25,20 @@ module BarkeepRails
 
     raise ArgumentError, "Must provide value" unless value && !value.to_s.empty?
 
-    url = (secure ? "https" : "http") +
-        "://barcodes4.me/barcode/#{type}/#{value}.#{imagetype}"
+    provider = options.delete(:provider) || self.default_provider
+
+    case provider.to_sym
+      when :barcodes4me
+        url = (secure ? "https" : "http") +
+          "://barcodes4.me/barcode/#{type}/#{value}.#{imagetype}"
+      when :barkeep
+        url = (secure ? "https" : "http") +
+          "://barkeep.zeevex.net/barcode/#{value}.#{imagetype}"
+        # barkeep expects type as a query arg so put it back in the hash
+        options[:type] = type
+      else
+        raise ArgumentError, "Unknown provider #{provider}"
+    end
 
     unless options.empty?
       url = url + "?" + options.to_query
@@ -34,6 +47,8 @@ module BarkeepRails
     url
   end
 end
+
+BarkeepRails.default_provider = :barkeep
 
 if defined?(Rails)
   require File.join(File.dirname(__FILE__), *%w[barkeep_rails barcode_helper])
